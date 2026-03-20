@@ -13,65 +13,63 @@ func main() {
 	inputFileName := "hosts.txt"
 	outputFileName := "hosts_ADGUARDDNS.txt"
 
-	// Открываем исходный файл для чтения
+	// Open input file for reading
 	inFile, err := os.Open(inputFileName)
 	if err != nil {
-		log.Fatalf("Ошибка при открытии файла %s: %v", inputFileName, err)
+		log.Fatalf("Error opening input file %s: %v", inputFileName, err)
 	}
 	defer inFile.Close()
 
-	// Создаем выходной файл для записи
+	// Create output file for writing
 	outFile, err := os.Create(outputFileName)
 	if err != nil {
-		log.Fatalf("Ошибка при создании файла %s: %v", outputFileName, err)
+		log.Fatalf("Error creating output file %s: %v", outputFileName, err)
 	}
 	defer outFile.Close()
 
-	// Используем сканер для построчного чтения
+	// Use scanner to read line by line
 	scanner := bufio.NewScanner(inFile)
 	
-	// Используем буферизированную запись для ускорения ввода-вывода
+	// Use buffered writer for better I/O performance
 	writer := bufio.NewWriter(outFile)
 	defer writer.Flush()
 
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Удаляем пробельные символы с конца строки (аналог rstrip в Python)
+		// Remove trailing whitespace (like rstrip in Python)
 		line = strings.TrimRightFunc(line, unicode.IsSpace)
 
-		// сохранить пустые строки
+		// Keep empty lines
 		if line == "" {
 			writer.WriteString("\n")
 			continue
 		}
 
-		// сохранить комментарии
+		// Keep comments
 		if strings.HasPrefix(line, "#") {
 			writer.WriteString(line + "\n")
 			continue
 		}
 
-		// разбиваем строку по любым пробельным символам (аналог split())
+		// Split the line by any whitespace
 		parts := strings.Fields(line)
 
-		// обработка строк вида "ip domain"
+		// Process lines in the format "ip domain"
 		if len(parts) >= 2 {
 			ip := parts[0]
 			domain := parts[1]
 
-			// Формируем новую строку
+			// Format the new line
 			newLine := fmt.Sprintf("|%s^$dnsrewrite=%s\n", domain, ip)
 			writer.WriteString(newLine)
 		}
 	}
 
-	// Проверяем, не возникло ли ошибок во время чтения файла
+	// Check for errors during file reading
 	if err := scanner.Err(); err != nil {
-		log.Fatalf("Ошибка при чтении файла: %v", err)
+		log.Fatalf("Error reading file: %v", err)
 	}
 
-	// Примечание: в вашем Python-скрипте выводилось hosts_new.txt, 
-	// здесь я подставил реальную переменную outputFileName для точности.
-	fmt.Printf("Готово: создан файл %s\n", outputFileName)
+	fmt.Printf("Done: created file %s\n", outputFileName)
 }
