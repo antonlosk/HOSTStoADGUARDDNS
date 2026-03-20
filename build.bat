@@ -1,17 +1,16 @@
 @echo off
-chcp 65001 > nul
-echo Компиляция программы в HOSTStoADGUARDDNS.exe...
+cd /d "%~dp0"
 
-:: Команда для компиляции с указанием выходного имени
+echo Compiling to HOSTStoADGUARDDNS.exe...
+
 go build -o HOSTStoADGUARDDNS.exe main.go
 
-:: Проверка на успешное завершение
 if %errorlevel% equ 0 (
     echo.
-    echo Успешно! Файл HOSTStoADGUARDDNS.exe создан.
+    echo SUCCESS! HOSTStoADGUARDDNS.exe created.
 ) else (
     echo.
-    echo Ошибка при компиляции. Проверьте правильность кода и установлен ли Go.
+    echo ERROR: Compilation failed.
 )
 
 echo.
