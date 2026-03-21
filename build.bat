@@ -1,17 +1,16 @@
 @echo off
-cd /d "%~dp0"
+REM Build script for HOSTStoADGUARDDNS
+REM Optimization flags used:
+REM -s : Disable symbol table
+REM -w : Disable DWARF generation
+REM -trimpath : Remove all file system paths from the resulting executable
 
-echo Compiling and optimizing to HOSTStoADGUARDDNS.exe...
-
-go build -ldflags "-s -w" -trimpath -o HOSTStoADGUARDDNS.exe main.go
+echo Building optimized executable...
+go build -ldflags="-s -w" -trimpath -o HOSTStoADGUARDDNS.exe main.go
 
 if %errorlevel% equ 0 (
-    echo.
-    echo SUCCESS! Optimized HOSTStoADGUARDDNS.exe created.
+    echo Build successful: HOSTStoADGUARDDNS.exe has been created.
 ) else (
-    echo.
-    echo ERROR: Compilation failed.
+    echo Build failed!
 )
-
-echo.
 pause
