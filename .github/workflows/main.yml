@@ -37,14 +37,14 @@ jobs:
           Z=$((Z + 1))
           
           # If Z exceeds 10 (e.g., 0.0.10 + 1), reset Z to 0 and increment Y
-          if [ $Z -gt 10 ]; then
+          if[ $Z -gt 10 ]; then
             Z=0
             Y=$((Y + 1))
           fi
           
           # If Y reaches 10 (e.g., 0.10.0) and we step forward (Z becomes 1),
           # reset Y and Z, and increment X
-          if [ $Y -ge 10 ] &&[ $Z -gt 0 ]; then
+          if [ $Y -ge 10 ] && [ $Z -gt 0 ]; then
             X=$((X + 1))
             Y=0
             Z=0
@@ -70,7 +70,7 @@ jobs:
           GOARCH: amd64
         run: |
           # Initialize a temporary go module if it doesn't exist to prevent build warnings
-          if[ ! -f go.mod ]; then go mod init dummy-module; fi
+          if [ ! -f go.mod ]; then go mod init dummy-module; fi
           
           # Compile the optimized exe file
           go build -ldflags "-s -w" -trimpath -o HOSTStoADGUARDDNS.exe main.go
