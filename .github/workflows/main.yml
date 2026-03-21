@@ -21,6 +21,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.26.1'
+          cache: false # Disable caching because we don't use external dependencies (no go.sum)
 
       - name: Calculate Next Version
         id: version
@@ -36,7 +37,7 @@ jobs:
           Z=$((Z + 1))
           
           # If Z exceeds 10 (e.g., 0.0.10 + 1), reset Z to 0 and increment Y
-          if [ $Z -gt 10 ]; then
+          if[ $Z -gt 10 ]; then
             Z=0
             Y=$((Y + 1))
           fi
@@ -68,6 +69,9 @@ jobs:
           GOOS: windows
           GOARCH: amd64
         run: |
+          # Initialize a temporary go module if it doesn't exist to prevent build warnings
+          if [ ! -f go.mod ]; then go mod init dummy-module; fi
+          
           # Compile the optimized exe file
           go build -ldflags "-s -w" -trimpath -o HOSTStoADGUARDDNS.exe main.go
 
