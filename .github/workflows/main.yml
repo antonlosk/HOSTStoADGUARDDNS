@@ -1,89 +1,72 @@
-name: Build and Auto-Release
+name: Build and Release
 
 on:
   push:
     branches:
-      - main # Run on push to main branch (change to master if needed)
-
-permissions:
-  contents: write # Permission for the bot to create tags and releases
+      - main
 
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Required to fetch tag history
+          fetch-depth: 0
+
+      - name: Calculate Next Version
+        id: version
+        run: |
+          # Get the latest tag, default to v0.0.0 if none exists
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          
+          # Remove the 'v' prefix for calculation
+          VERSION=${LATEST_TAG#v}
+          
+          # Split into MAJOR, MINOR, PATCH
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+          
+          # Increment patch
+          PATCH=$((PATCH + 1))
+          
+          # Logic: After 10, roll over to the next tier
+          if [ "$PATCH" -gt 10 ]; then
+            PATCH=0
+            MINOR=$((MINOR + 1))
+          fi
+          
+          if [ "$MINOR" -gt 10 ]; then
+            MINOR=0
+            MAJOR=$((MAJOR + 1))
+          fi
+          
+          NEXT_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "Next version will be: $NEXT_VERSION"
+          
+          # Save to output for subsequent steps
+          echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.26.1'
-          cache: false # Disable caching because we don't use external dependencies (no go.sum)
 
-      - name: Calculate Next Version
-        id: version
-        run: |
-          # Get the latest tag (if none exists, start with v0.0.0)
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          VERSION=${LATEST_TAG#v}
-          
-          # Split the version into X Y Z
-          IFS='.' read -r X Y Z <<< "$VERSION"
-          
-          # Increment Z (step forward)
-          Z=$((Z + 1))
-          
-          # If Z exceeds 10 (e.g., 0.0.10 + 1), reset Z to 0 and increment Y
-          if[ $Z -gt 10 ]; then
-            Z=0
-            Y=$((Y + 1))
-          fi
-          
-          # If Y reaches 10 (e.g., 0.10.0) and we step forward (Z becomes 1),
-          # reset Y and Z, and increment X
-          if[ $Y -ge 10 ] && [ $Z -gt 0 ]; then
-            X=$((X + 1))
-            Y=0
-            Z=0
-          fi
-          
-          NEW_TAG="v$X.$Y.$Z"
-          echo "Previous version: $LATEST_TAG"
-          echo "New version: $NEW_TAG"
-          
-          # Pass the new version to the next steps
-          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
-
-      - name: Create and Push Tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag ${{ steps.version.outputs.new_tag }}
-          git push origin ${{ steps.version.outputs.new_tag }}
-
-      - name: Build Optimized Windows EXE
+      - name: Build Optimized Windows Executable
         env:
           GOOS: windows
           GOARCH: amd64
         run: |
-          # Initialize a temporary go module if it doesn't exist to prevent build warnings
-          if [ ! -f go.mod ]; then go mod init dummy-module; fi
-          
-          # Compile the optimized exe file
-          go build -ldflags "-s -w" -trimpath -o HOSTStoADGUARDDNS.exe main.go
+          # Build with optimization flags and append version to the filename
+          go build -ldflags="-s -w" -trimpath -o HOSTStoADGUARDDNS_${{ steps.version.outputs.version }}.exe main.go
 
-      - name: Create Release and Upload EXE
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.version.outputs.new_tag }}
-          name: Release ${{ steps.version.outputs.new_tag }}
-          files: HOSTStoADGUARDDNS.exe
-          body: |
-            Automated build for version ${{ steps.version.outputs.new_tag }} using **Go 1.26.1**
-          draft: false
-          prerelease: false
+      - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create a new release and upload the executable asset
+          gh release create ${{ steps.version.outputs.version }} \
+            HOSTStoADGUARDDNS_${{ steps.version.outputs.version }}.exe \
+            --title "Release ${{ steps.version.outputs.version }}" \
+            --generate-notes
